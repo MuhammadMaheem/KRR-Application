@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+/* Custom background to make the academic theme pop */
+body {
+  background-color: #f8fafc; /* tailwind slate-50 */
+}

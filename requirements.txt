@@ -1,0 +1,41 @@
+# ── Core Framework ──────────────────────────────────────────────
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# ── Data Validation & Settings ──────────────────────────────────
+pydantic==2.5.2
+pydantic-settings==2.1.0
+
+# ── PDF Processing ───────────────────────────────────────────────
+PyMuPDF==1.23.6
+
+# ── AI / Groq ──────────────────────────────────────────────────
+groq==0.5.0
+
+# ── Auth & Security ─────────────────────────────────────────────
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+
+# ── Database (PostgreSQL) ──────────────────────────────────────
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+alembic==1.13.1
+
+# ── Async & Utilities ──────────────────────────────────────────
+asyncio==3.4.3
+python-dotenv==1.0.0
+uuid7==1.0.0
+
+# ── Monitoring & Logging ───────────────────────────────────────
+structlog==23.2.0
+prometheus-client==0.19.0
+
+# ── Redis (for rate limiting, task queue) ─────────────────────
+redis==5.0.1
+slowapi==0.1.9
+
+# ── Development & Testing ──────────────────────────────────────
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.1
