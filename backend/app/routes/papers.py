@@ -1,4 +1,6 @@
+import os
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, status
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
@@ -40,6 +42,24 @@ async def upload_paper(
     background_tasks.add_task(paper_service.process_paper, str(paper.id), saved_path)
 
     return paper
+
+
+@router.get("/{paper_id}/file")
+async def serve_paper_file(
+    paper_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    paper = await paper_service.get_paper(db, paper_id, str(current_user.id))
+    if not paper:
+        raise HTTPException(status_code=404, detail="Paper not found")
+    if not paper.file_path or not os.path.exists(paper.file_path):
+        raise HTTPException(status_code=404, detail="PDF file not found on disk")
+    return FileResponse(
+        paper.file_path,
+        media_type="application/pdf",
+        filename=paper.file_name,
+    )
 
 
 @router.get("/{paper_id}", response_model=PaperResponse)
