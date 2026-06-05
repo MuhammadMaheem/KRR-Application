@@ -15,7 +15,6 @@ class PaperResponse(PaperBase):
 
     id: uuid.UUID
     file_name: str
-    file_path: str
     file_size: Optional[int] = None
     page_count: Optional[int] = None
     status: str
@@ -35,3 +34,11 @@ class PaperListResponse(PaperBase):
     page_count: Optional[int] = None
     status: str
     created_at: Optional[datetime] = None
+
+
+class PaginatedPapers(BaseModel):
+    items: List[PaperListResponse]
+    total: int
+    page: int
+    limit: int
+    pages: int

@@ -1,13 +1,12 @@
 import uuid
 import os
-import shutil
 from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, func, or_
 
-from app.models.paper import Paper, Analysis
-from app.services import pdf_service, groq_service
+from app.models.paper import Paper
+from app.services import pdf_service, groq_service, embedding_service
 
 
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "./uploads")
@@ -62,6 +61,11 @@ async def process_paper(paper_id: str, file_path: str):
             if extracted["content"]:
                 summary = groq_service.generate_summary(extracted["content"])
                 paper.summary = summary
+                try:
+                    embed_text = f"{paper.title}. {paper.abstract or ''} {summary or ''}"
+                    paper.embedding = embedding_service.embed(embed_text)
+                except Exception:
+                    pass  # embeddings optional — skip if model unavailable
 
             paper.status = "processed"
             paper.updated_at = datetime.now(timezone.utc)
@@ -74,11 +78,41 @@ async def process_paper(paper_id: str, file_path: str):
             await db.commit()
 
 
-async def get_all_papers(db: AsyncSession, user_id: str) -> list[Paper]:
+async def get_all_papers(
+    db: AsyncSession,
+    user_id: str,
+    page: int = 1,
+    limit: int = 20,
+    q: str | None = None,
+) -> dict:
+    base_filter = Paper.user_id == user_id
+    if q:
+        search = f"%{q}%"
+        base_filter = base_filter & or_(
+            Paper.title.ilike(search),
+            Paper.abstract.ilike(search),
+        )
+
+    total_result = await db.execute(select(func.count()).select_from(Paper).where(base_filter))
+    total = total_result.scalar_one()
+
+    offset = (page - 1) * limit
     result = await db.execute(
-        select(Paper).where(Paper.user_id == user_id).order_by(Paper.created_at.desc())
+        select(Paper)
+        .where(base_filter)
+        .order_by(Paper.created_at.desc())
+        .offset(offset)
+        .limit(limit)
     )
-    return result.scalars().all()
+    items = result.scalars().all()
+
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "pages": max(1, -(-total // limit)),
+    }
 
 
 async def get_paper(db: AsyncSession, paper_id: str, user_id: str) -> Paper | None:
@@ -125,57 +159,3 @@ async def retrigger_summary(paper_id: str):
             paper.error_message = str(e)
             paper.updated_at = datetime.now(timezone.utc)
             await db.commit()
-
-
-async def create_analysis(
-    db: AsyncSession, analysis_type: str, paper_ids: list[str], user_id: str
-) -> Analysis:
-    result = await db.execute(
-        select(Paper).where(Paper.id.in_(paper_ids), Paper.user_id == user_id)
-    )
-    papers = result.scalars().all()
-    if len(papers) < 2:
-        raise ValueError("Need at least 2 papers for analysis")
-
-    papers_data = [
-        {
-            "title": p.title,
-            "authors": p.authors or [],
-            "summary": p.summary,
-            "content": p.content,
-        }
-        for p in papers
-    ]
-
-    if analysis_type == "comparative":
-        result_text = groq_service.generate_comparative(papers_data)
-    elif analysis_type == "synthetic_review":
-        result_text = groq_service.generate_synthetic_review(papers_data)
-    else:
-        raise ValueError(f"Unknown analysis type: {analysis_type}")
-
-    analysis = Analysis(
-        type=analysis_type,
-        paper_ids=[str(p.id) for p in papers],
-        paper_titles=[p.title for p in papers],
-        result=result_text,
-        user_id=user_id,
-    )
-    db.add(analysis)
-    await db.commit()
-    await db.refresh(analysis)
-    return analysis
-
-
-async def get_all_analyses(db: AsyncSession, user_id: str) -> list[Analysis]:
-    result = await db.execute(
-        select(Analysis).where(Analysis.user_id == user_id).order_by(Analysis.created_at.desc())
-    )
-    return result.scalars().all()
-
-
-async def get_analysis(db: AsyncSession, analysis_id: str, user_id: str) -> Analysis | None:
-    result = await db.execute(
-        select(Analysis).where(Analysis.id == analysis_id, Analysis.user_id == user_id)
-    )
-    return result.scalar_one_or_none()

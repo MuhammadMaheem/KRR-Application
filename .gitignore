@@ -16,11 +16,13 @@ backend/venv/
 htmlcov/
 pip-wheel-metadata/
 
-# Env files
+# Env files — never commit real secrets
 .env
 .env.*
 !.env.example
 !.env.local.example
+backend/.env
+frontend/.env.local
 
 # Database / local data
 *.db
@@ -40,6 +42,7 @@ frontend/build/
 frontend/.vercel/
 frontend/coverage/
 frontend/*.tsbuildinfo
+frontend/tsconfig.tsbuildinfo
 frontend/next-env.d.ts
 
 # OS / editor

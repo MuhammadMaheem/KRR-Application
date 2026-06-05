@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 import os
 
 from app.database import get_db
-from app.models.paper import User
+from app.models.user import User
 
 SECRET_KEY = os.getenv("SECRET_KEY", "changeme-set-in-env")
 ALGORITHM = "HS256"

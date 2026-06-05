@@ -17,15 +17,36 @@ def get_client() -> Groq:
 PRIMARY_MODEL = "llama-3.3-70b-versatile"
 FAST_MODEL = "llama-3.1-8b-instant"
 
-SUMMARY_PROMPT = """You are a research paper analyst. Analyze the paper content below and produce a structured summary using EXACTLY these section headers in markdown bold:
+SUMMARY_PROMPT = """You are a research paper analyst. Analyze the paper content below and produce a structured summary using EXACTLY this markdown structure. Do not deviate from the format.
 
-**Contributions:** List 2-4 key contributions as bullet points.
-**Methodology:** Describe the approach, techniques, datasets, and tools used.
-**Results:** Key findings, metrics, benchmarks, or performance numbers.
-**Limitations:** Acknowledged weaknesses, scope gaps, or future work.
-**Keywords:** 5-8 relevant topic keywords, comma-separated.
+## Overview
+One concise paragraph. Summarise the paper's purpose, domain, and core idea.
 
-Be concise and precise. Use the paper's own language where possible.
+### Key Contributions
+- **Term**: one-line description
+- **Term**: one-line description
+- **Term**: one-line description
+(2-4 bullets. Bold only the key term before the colon, keep the rest plain.)
+
+### Methodology
+One paragraph. Describe the approach, techniques, datasets, and tools used.
+
+### Results
+One paragraph. Include specific numbers, metrics, benchmarks where available.
+
+### Limitations
+- one-line limitation
+- one-line limitation
+(2-3 bullets, no bold.)
+
+> One sentence — the single most important insight or takeaway from this paper.
+
+**Keywords:** keyword1, keyword2, keyword3, keyword4, keyword5
+
+Rules:
+- Use ## only for Overview, ### for all other sections.
+- Do not add any extra sections or headings.
+- Be concise. Use the paper's own language.
 
 Paper content:
 {content}"""
@@ -111,3 +132,56 @@ def generate_synthetic_review(papers: list[dict]) -> str:
         max_tokens=3000,
     )
     return response.choices[0].message.content.strip()
+
+
+RAG_PROMPT = """You are a research assistant. Answer the question below using ONLY the provided paper content.
+If the answer is not in the paper, say so clearly.
+
+Paper: {title}
+Authors: {authors}
+
+Content (excerpt):
+{context}
+
+Question: {question}
+
+Answer concisely and cite specific sections or findings where possible."""
+
+
+def answer_question(title: str, authors: list[str], context: str, question: str) -> str:
+    prompt = RAG_PROMPT.format(
+        title=title,
+        authors=", ".join(authors) if authors else "Unknown",
+        context=context[:6000],
+        question=question,
+    )
+    client = get_client()
+    response = client.chat.completions.create(
+        model=PRIMARY_MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.2,
+        max_tokens=1024,
+    )
+    return response.choices[0].message.content.strip()
+
+
+def stream_answer(title: str, authors: list[str], context: str, question: str):
+    """Yields text chunks from Groq streaming API."""
+    prompt = RAG_PROMPT.format(
+        title=title,
+        authors=", ".join(authors) if authors else "Unknown",
+        context=context[:6000],
+        question=question,
+    )
+    client = get_client()
+    stream = client.chat.completions.create(
+        model=PRIMARY_MODEL,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.2,
+        max_tokens=1024,
+        stream=True,
+    )
+    for chunk in stream:
+        delta = chunk.choices[0].delta.content
+        if delta:
+            yield delta

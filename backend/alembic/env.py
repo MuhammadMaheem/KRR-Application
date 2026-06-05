@@ -16,7 +16,9 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Import all models so autogenerate can detect them
-from app.models.paper import Paper, Analysis
+from app.models.user import User
+from app.models.paper import Paper
+from app.models.analysis import Analysis
 from app.database import Base
 
 target_metadata = Base.metadata

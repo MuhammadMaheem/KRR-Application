@@ -3,9 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.database import get_db
-from app.models.paper import User
+from app.models.user import User
 from app.schemas.analysis import AnalysisCreate, AnalysisResponse
-from app.services import paper_service
+from app.services import analysis_service
 
 router = APIRouter(prefix="/api/analyses", tags=["analyses"])
 
@@ -17,7 +17,7 @@ async def list_analyses(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await paper_service.get_all_analyses(db, str(current_user.id))
+    return await analysis_service.get_all_analyses(db, str(current_user.id))
 
 
 @router.post("", response_model=AnalysisResponse, status_code=status.HTTP_201_CREATED)
@@ -32,7 +32,7 @@ async def create_analysis(
         raise HTTPException(status_code=400, detail="Need at least 2 paper_ids")
 
     try:
-        analysis = await paper_service.create_analysis(
+        analysis = await analysis_service.create_analysis(
             db,
             body.type,
             [str(pid) for pid in body.paper_ids],
@@ -50,7 +50,7 @@ async def get_analysis(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    analysis = await paper_service.get_analysis(db, analysis_id, str(current_user.id))
+    analysis = await analysis_service.get_analysis(db, analysis_id, str(current_user.id))
     if not analysis:
         raise HTTPException(status_code=404, detail="Analysis not found")
     return analysis
