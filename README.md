@@ -61,8 +61,8 @@
 ## Quick Start — Docker (recommended)
 
 ```bash
-git clone https://github.com/yourusername/KRR-APP.git
-cd KRR-APP
+git clone https://github.com/MuhammadMaheem/KRR-Application.git
+cd KRR-Application
 
 # Copy env files
 cp backend/.env.example backend/.env

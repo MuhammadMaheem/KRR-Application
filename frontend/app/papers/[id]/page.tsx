@@ -36,9 +36,6 @@ export default function PaperDetailPage() {
   const [citeText, setCiteText] = useState("");
   const [citeCopied, setCiteCopied] = useState(false);
 
-  // SSE ref
-  const sseRef = useRef<EventSource | null>(null);
-
   const fetchPaper = useCallback(async () => {
     try {
       const res = await getPaper(id);
@@ -58,14 +55,8 @@ export default function PaperDetailPage() {
 
   // SSE: connect when paper is pending/processing
   useEffect(() => {
-    if (!paper) return;
-    if (!["pending", "processing"].includes(paper.status)) return;
+    if (!["pending", "processing"].includes(paper?.status ?? "")) return;
 
-    const token = localStorage.getItem("krr_token") || "";
-    const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
-    // EventSource doesn't support custom headers — pass token via cookie-less auth won't work.
-    // Fallback: poll every 2s using fetch (keeps SSE spirit but works with JWT).
     const interval = setInterval(async () => {
       try {
         const res = await getPaper(id);
